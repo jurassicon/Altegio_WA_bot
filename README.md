@@ -1,0 +1,1 @@
+## salon-whatsapp-bot (FastAPI + Celery + Altegio + WhatsApp)
