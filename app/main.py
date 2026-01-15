@@ -1,13 +1,14 @@
+from __future__ import annotations
+
 from fastapi import FastAPI
 
-app = FastAPI()
+from app.api.routes import all_routers
+from app.core.config import settings
+from app.core.logging import setup_logging
 
+setup_logging()
 
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
+app = FastAPI(title=settings.APP_NAME)
 
-
-@app.get("/hello/{name}")
-async def say_hello(name: str):
-    return {"message": f"Hello {name}"}
+for r in all_routers:
+    app.include_router(r)
