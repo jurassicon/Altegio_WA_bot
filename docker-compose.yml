@@ -1,10 +1,10 @@
 services:
-  postgres:
+  db:
     image: postgres:16
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-bot}
-      POSTGRES_USER: ${POSTGRES_USER:-bot}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bot}
+      POSTGRES_DB: app
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
     ports:
       - "5432:5432"
     volumes:
@@ -19,38 +19,44 @@ services:
     build: .
     env_file: .env
     depends_on:
-      - postgres
+      - db
       - redis
-    ports:
-      - "8000:8000"
-    command: >
-      uvicorn app.main:app
-      --host 0.0.0.0 --port 8000
-      --proxy-headers --forwarded-allow-ips="*"
+    command: ["/app/.venv/bin/uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    expose:
+      - "8000"
 
   worker:
     build: .
     env_file: .env
     depends_on:
-      - postgres
+      - db
       - redis
-    command: celery -A app.celery_app.celery worker -l INFO
+    command: ["/app/.venv/bin/celery", "-A", "app.tasks.celery_app.celery_app", "worker", "-l", "INFO"]
 
   beat:
     build: .
     env_file: .env
     depends_on:
-      - postgres
+      - db
       - redis
-    command: celery -A app.celery_app.celery beat -l INFO
+    command: ["/app/.venv/bin/celery", "-A", "app.tasks.celery_app.celery_app", "beat", "-l", "INFO"]
 
   sender:
     build: .
     env_file: .env
     depends_on:
-      - postgres
+      - db
       - redis
-    command: python -m app.sender
+    command: ["/app/.venv/bin/python", "-m", "app.sender.run_sender"]
+
+  nginx:
+    image: nginx:1.27
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
 
 volumes:
   pgdata:
